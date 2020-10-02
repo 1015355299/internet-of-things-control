@@ -8,8 +8,8 @@ import axios from "axios";
 Vue.config.productionTip = false;
 
 Vue.prototype.$http = axios.create({
-  //baseURL: process.env.VUE_APP_API_URL || "/wlw/api"
-  baseURL: 'http://localhost:3333/wlw/api'
+  baseURL: process.env.VUE_APP_API_URL || "/wlw/api"
+  //baseURL: 'http://localhost:3333/wlw/api'
 });
 
 new Vue({

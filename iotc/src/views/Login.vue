@@ -1,4 +1,6 @@
 <template>
+<div class="main">
+  <h3 style="text-align:center;margin:5vh 0;color:skyblue">物联网控制平台</h3>
   <div class="login">
     <form action="" @submit="login">
       <ul class="login-check">
@@ -19,39 +21,33 @@
       </ul>
     </form>
   </div>
+  </div>
 </template>
 
 <script>
 export default {
   data() {
     return {
-      checked: "",
-      model: {}
-    };
+      model: {},
+    }
   },
   methods: {
     login() {
-      if (this.model.username == "mycar" && this.model.password == "1234") {
-        sessionStorage.setItem("token", "true");
-        this.$message.success(`登录成功！`);
-        this.$router.push("/home");
+      if (this.model.username == 'mycar' && this.model.password == '1234') {
+        sessionStorage.setItem('token', 'true')
+        this.$message.success(`登录成功！`)
+        this.$router.push('/home')
       } else {
-        this.$message.success(`账号或密码错误！`);
-        this.$router.push("/Login");
+        this.$message.warning(`账号或密码错误！`)
+        this.$router.push('/Login')
       }
-      return;
-    }
+      return
+    },
   },
-  mounted() {}
-};
+}
 </script>
 
 <style scoped>
-#svg {
-  position: relative;
-  top: 8px;
-}
-
 * {
   margin: 0;
   padding: 0;
@@ -62,11 +58,12 @@ li {
   list-style: none;
 }
 
-html {
+.main {
+  position: relative;
   background: linear-gradient(45deg, #08a, #04a);
+  overflow: hidden;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
 }
 
 .login {
@@ -130,25 +127,14 @@ form li:not(:nth-child(1)) {
 
 form input {
   justify-self: center;
-  background-color: rgba(150, 150, 150, 0.6);
-  border: 0;
+  background-color: rgba(221, 205, 205, 0.89);
+  border-radius: 3px;
   margin-left: 5px;
   width: 150px;
   height: 25px;
   flex: 1;
   font-size: 16px;
   transition-duration: 1s;
-}
-
-#ch {
-  width: 80px;
-}
-#ch + span {
-  display: inline-block;
-  width: 70px;
-  font-weight: 500;
-  user-select: none;
-  cursor: pointer;
 }
 
 form button {

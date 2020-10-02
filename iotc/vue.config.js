@@ -1,10 +1,7 @@
 module.exports = {
-  productionSourceMap:false,
+  productionSourceMap: false,
   outputDir: __dirname + '/../server/iotc',
   publicPath: '/',
 
-  configureWebpack: config => {
-
-  }
-
+  configureWebpack: (config) => {},
 }

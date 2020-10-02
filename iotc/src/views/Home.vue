@@ -4,15 +4,22 @@
       <el-header>物联网小车控制平台</el-header>
       <el-main>
         <el-row type="flex">
-          <el-select v-model="encoded" placeholder="请选择编码格式">
-            <el-option
-              v-for="item in options"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            >
-            </el-option>
-          </el-select>
+          <el-col :span="12">
+            <el-select v-model="encoded" placeholder="请选择编码格式">
+              <el-option
+                v-for="item in options"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+              </el-option> </el-select></el-col
+          ><el-col :span="6">
+            <el-tag type="info" effect="dark">
+              {{ isConnected ? '已连接' : '未连接' }}
+            </el-tag> </el-col
+          ><el-col :span="6">
+            <el-button type="success" @click="saveConfig" round>保存</el-button>
+          </el-col>
         </el-row>
         <el-row type="flex">
           <el-col :span="12"
@@ -24,8 +31,8 @@
               :active-value="1"
               :inactive-value="0"
             >
-            </el-switch
-          ></el-col>
+            </el-switch>
+          </el-col>
           <el-col :span="12"
             ><el-button
               class="addBtn"
@@ -55,7 +62,11 @@
               type="primary"
               round
               @touchstart.native="
-                touch((row - 1) * 3 + (col - 1), btns.cmd, btns.interval)
+                touch(
+                  (row - 1) * 3 + (col - 1),
+                  btns[(row - 1) * 3 + (col - 1)].cmd,
+                  btns[(row - 1) * 3 + (col - 1)].interval
+                )
               "
               @touchend.native="endSend"
               >按钮{{ (row - 1) * 3 + col }}</el-button
@@ -68,7 +79,7 @@
           width="80%"
           center
         >
-          <div class="dialog-title">发送内容({{encoded}})：</div>
+          <div class="dialog-title">发送内容({{ encoded }})：</div>
           <el-input
             placeholder="请输入发送内容"
             v-model="inputValue1"
@@ -99,17 +110,17 @@ export default {
   components: {},
   data() {
     return {
-      options:[
+      options: [
         {
-          label:'UTF-8',
-          value:'UTF-8'
+          label: 'UTF-8',
+          value: 'UTF-8',
         },
         {
-          label:'HEX',
-          value:'HEX'
-        }
+          label: 'HEX',
+          value: 'HEX',
+        },
       ],
-      encoded:'UTF-8',
+      encoded: 'UTF-8',
       btns: [],
       mode: 0,
       centerDialogVisible: false,
@@ -117,6 +128,8 @@ export default {
       inputValue2: '',
       curNum: 0,
       sendingTimer: 0,
+      isConnected: false,
+      pollTimer: 0,
     }
   },
 
@@ -146,18 +159,22 @@ export default {
         this.inputValue1 = this.btns[index].cmd
         this.inputValue2 = this.btns[index].interval
       } else {
+        // 点击按钮
         this.sendData(cmd, interval)
       }
       //console.log(this.btns[index].cmd, this.btns[index].interval, this.mode)
     },
     sendData(cmd = '', interval = 0) {
       if (interval !== 0) {
+        //连续发送
         this.sendingTimer = setInterval(() => {
           console.log('发送：' + cmd, '间隔：' + interval)
-          this.$http.post('sendCmd',{cmd,interval})
+          this.$http.post('sendCmd', { cmd, interval })
         }, interval)
       } else {
+        // 单个发送
         console.log('发送：' + cmd)
+        this.$http.post('sendCmd', { cmd, interval })
       }
     },
     endSend() {
@@ -168,9 +185,29 @@ export default {
       this.btns[this.curNum].interval = this.inputValue2
       this.centerDialogVisible = false
     },
+    saveConfig() {
+      localStorage.setItem('btn_config', JSON.stringify(this.btns))
+      this.$message.success(`保存配置成功！`)
+    },
+    getConfig() {
+      this.btns = JSON.parse(localStorage.getItem('btn_config'))
+    },
   },
   mounted() {
-    this.createBtn()
+    if (!localStorage.getItem('btn_config')) {
+      this.createBtn()
+    } else {
+      this.getConfig()
+    }
+    this.pollTimer = setInterval(async () => {
+      const res = await this.$http.get('getStatus')
+      console.log(res.data.connected)
+      if (res.data.connected) {
+        this.isConnected = true
+        clearInterval(this.pollTimer)
+        this.$message.success(`连接成功！`)
+      }
+    }, 2000)
   },
 }
 </script>

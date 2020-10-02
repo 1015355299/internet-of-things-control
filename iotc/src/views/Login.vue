@@ -25,25 +25,25 @@
 export default {
   data() {
     return {
-      checked: '',
-      model: {},
-    }
+      checked: "",
+      model: {}
+    };
   },
   methods: {
     login() {
-      if (this.model.username == 'mycar' && this.model.password == '1234') {
-        sessionStorage.setItem('token','true')
-        this.$message.success(`登录成功！`)
-        this.$router.push('/home')
+      if (this.model.username == "mycar" && this.model.password == "1234") {
+        sessionStorage.setItem("token", "true");
+        this.$message.success(`登录成功！`);
+        this.$router.push("/home");
       } else {
-        this.$message.success(`账号或密码错误！`)
-        this.$router.push('/Login')
+        this.$message.success(`账号或密码错误！`);
+        this.$router.push("/Login");
       }
-      return
-    },
+      return;
+    }
   },
-  mounted() {},
-}
+  mounted() {}
+};
 </script>
 
 <style scoped>

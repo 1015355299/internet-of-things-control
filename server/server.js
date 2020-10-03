@@ -26,7 +26,7 @@ router.get('/getStatus/:devId', (req, res) => {
     res.send(
       JSON.stringify({
         msg: `device: ${device.remoteAddress}:${device.remotePort}`,
-        connected: device.isConnected,
+        connected: true,
       })
     )
   } else {
@@ -42,31 +42,34 @@ router.get('/getStatus/:devId', (req, res) => {
 // 关闭连接
 router.get('/closeSocket', (req, res) => {
   Dev_Socket.write && Dev_Socket.destroy()
-  device.isConnected = !Dev_Socket.destroyed
-  console.log(`关闭socket连接 ${device.isConnected ? 'close fail' : 'closed'}!`)
-  res.send(
-    JSON.stringify({
-      msg: `device: ${device.remoteAddress}:${device.remotePort} ${
-        device.isConnected ? 'close fail' : 'closed'
-      }!`,
-      connected: device.isConnected,
-    })
-  )
+  setTimeout(() => {
+    device.isConnected = !Dev_Socket.destroyed
+    console.log(`关闭socket连接 ${device.isConnected ? 'close fail' : 'closed'}!`)
+    res.send(
+      JSON.stringify({
+        msg: `device: ${device.remoteAddress}:${device.remotePort} ${
+          device.isConnected ? 'close fail' : 'closed'
+        }!`,
+        connected: device.isConnected,
+      })
+    )
+  }, 1000)
 })
 
 // 发送指令
 router.post('/sendCmd', (req, res) => {
   //console.log(req.body)
   if (Dev_Socket.write && socket_send_data(Dev_Socket, req.body)) {
+    device.isConnected = true
     res.send({
       msg: `send cmd [${req.body.cmd}] ok!`,
-      connected: device.isConnected,
+      connected: true,
     })
   } else {
     device.isConnected = false
     res.send({
       msg: `send cmd [${req.body.cmd}] fail!`,
-      connected: device.isConnected,
+      connected: false,
     })
   }
 })
@@ -88,6 +91,7 @@ function socket_listener(socket) {
     device.remoteAddress = socket.remoteAddress.slice(7)
     device.remotePort = socket.remotePort
     device.devId = Number(res.split(':')[1])
+    device.isConnected = false
     console.log('the size of data is : ' + readSize)
     console.log('the data is : ' + res)
     console.log('the remoteAddress is : ' + device.remoteAddress)

@@ -139,7 +139,7 @@ export default {
         { content: '右转', cmd: 'right1#', interval: 0 },
         { content: '自由', cmd: 'free#', interval: 0 },
         { content: '循迹', cmd: 'xunji#', interval: 0 },
-        { content: '避障', cmd: '避障#', interval: 0 },
+        { content: '避障', cmd: 'bizhang#', interval: 0 },
         { content: '左小转', cmd: 'left0#', interval: 0 },
         { content: '左大转', cmd: 'left2#', interval: 0 },
         { content: '左转90', cmd: 'left3#', interval: 0 },
@@ -208,7 +208,7 @@ export default {
       } else {
         // 单个发送
         //console.log('发送：' + cmd)
-        console.log(encoded)
+        //console.log(encoded)
         this.$http.post('sendCmd', { cmd, interval, encoded })
       }
     },
@@ -239,18 +239,23 @@ export default {
         //断开
         this.$http.get('closeSocket').then((res) => {
           if (res.data.connected) {
-            if (this.isConnected)
-              this.$message.success(`连接断开失败，请手动断开设备！`)
             clearInterval(this.pollTimer)
+            if (this.isConnected) {
+              this.$message.warning(`连接断开失败，请手动断开设备！`)
+            }
+            this.isConnected = false
           } else {
             clearInterval(this.pollTimer)
-            if (this.isConnected) this.$message.warning(`连接断开成功！`)
+            if (this.isConnected) {
+              this.$message.success(`连接断开成功！`)
+            }
             this.isConnected = false
           }
         })
       } else {
-        if (this.deviceNum == null || isNaN(this.deviceNum))
+        if (this.deviceNum == null || isNaN(this.deviceNum)){
           return this.$message.warning(`请输入正确的设备编号！`)
+        }
         this.$message.warning(`检测设备中！`)
         this.$http.get(`getStatus/${this.deviceNum}`).then(({ data }) => {
           if (data.msg == 'device is not find!') {

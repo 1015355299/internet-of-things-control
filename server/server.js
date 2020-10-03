@@ -22,8 +22,8 @@ app.use('/', express.static(__dirname + '/iotc'))
 
 // 检测设备连接状态
 router.get('/getStatus/:id', (req, res) => {
-  if (req.params.id*1 == device.id*1) {
-    console.log('设备已识别！');
+  if (req.params.id * 1 == device.id * 1 && device.isConnected) {
+    console.log('设备已识别！')
     res.send(
       JSON.stringify({
         msg: `device: ${device.remoteAddress}:${device.remotePort}`,
@@ -31,7 +31,7 @@ router.get('/getStatus/:id', (req, res) => {
       })
     )
   } else {
-    console.log(`设备未识别！req_id:${req.params.id} dev_id:${device.id}`);
+    console.log(`设备未识别！req_id:${req.params.id} dev_id:${device.id}`)
     res.send(
       JSON.stringify({
         msg: `device is not find!`,
@@ -46,7 +46,9 @@ router.get('/closeSocket', (req, res) => {
   Dev_Socket.write && Dev_Socket.destroy()
   setTimeout(() => {
     device.isConnected = !Dev_Socket.destroyed
-    console.log(`关闭socket连接 ${device.isConnected ? 'close fail' : 'closed'}!`)
+    console.log(
+      `关闭socket连接 ${device.isConnected ? 'close fail' : 'closed'}!`
+    )
     res.send(
       JSON.stringify({
         msg: `device: ${device.remoteAddress}:${device.remotePort} ${

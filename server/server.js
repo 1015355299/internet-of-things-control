@@ -14,15 +14,16 @@ const device = {
   isConnected: false,
   remoteAddress: '127.0.0.1',
   remotePort: 55555,
-  devId: 0,
+  id: 0,
 }
 let Dev_Socket = {}
 // 静态资源托管，控制页面
 app.use('/', express.static(__dirname + '/iotc'))
 
 // 检测设备连接状态
-router.get('/getStatus/:devId', (req, res) => {
-  if (Number(req.params.devId) == device.devId) {
+router.get('/getStatus/:id', (req, res) => {
+  if (req.params.id*1 == device.id*1) {
+    console.log('设备已识别！');
     res.send(
       JSON.stringify({
         msg: `device: ${device.remoteAddress}:${device.remotePort}`,
@@ -30,6 +31,7 @@ router.get('/getStatus/:devId', (req, res) => {
       })
     )
   } else {
+    console.log(`设备未识别！req_id:${req.params.id} dev_id:${device.id}`);
     res.send(
       JSON.stringify({
         msg: `device is not find!`,
@@ -58,14 +60,15 @@ router.get('/closeSocket', (req, res) => {
 
 // 发送指令
 router.post('/sendCmd', (req, res) => {
-  //console.log(req.body)
   if (Dev_Socket.write && socket_send_data(Dev_Socket, req.body)) {
+    console.log('写入指令成功！')
     device.isConnected = true
     res.send({
       msg: `send cmd [${req.body.cmd}] ok!`,
       connected: true,
     })
   } else {
+    console.log('写入指令失败！')
     device.isConnected = false
     res.send({
       msg: `send cmd [${req.body.cmd}] fail!`,
@@ -90,7 +93,7 @@ function socket_listener(socket) {
     const res = data.toString()
     device.remoteAddress = socket.remoteAddress.slice(7)
     device.remotePort = socket.remotePort
-    device.devId = Number(res.split(':')[1])
+    device.id = Number(res.split(':')[1])
     device.isConnected = false
     console.log('the size of data is : ' + readSize)
     console.log('the data is : ' + res)

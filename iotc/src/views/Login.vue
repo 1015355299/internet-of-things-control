@@ -1,26 +1,26 @@
 <template>
-<div class="main">
-  <h3 style="text-align:center;margin:5vh 0;color:skyblue">物联网控制平台</h3>
-  <div class="login">
-    <form action="" @submit="login">
-      <ul class="login-check">
-        <li>登录</li>
-        <li>
-          <label class="iconfont icon-wo" for="na"></label
-          ><input id="na" v-model="model.username" />
-        </li>
-        <li>
-          <label class="iconfont icon-suo" for="pass"></label
-          ><input type="password" v-model="model.password" id="pass" />
-        </li>
-        <li>
-          <button type="submit">
-            NEXT DOOR
-          </button>
-        </li>
-      </ul>
-    </form>
-  </div>
+  <div class="main">
+    <h3 class="title">5102物联网控制平台</h3>
+    <div class="login-container">
+      <form action="" @submit="login">
+        <ul class="login-check">
+          <li class="login-title">登录</li>
+          <li class="login-username">
+            <label class="iconfont icon-wo" for="username"></label
+            ><input id="username" v-model="model.username" />
+          </li>
+          <li class="login-password">
+            <label class="iconfont icon-suo" for="password"></label
+            ><input id="password" type="password" v-model="model.password" />
+          </li>
+          <li class="login-button">
+            <button type="submit">
+              NEXT DOOR
+            </button>
+          </li>
+        </ul>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -36,10 +36,9 @@ export default {
       if (this.model.username == 'mycar' && this.model.password == '1234') {
         sessionStorage.setItem('token', 'true')
         this.$message.success(`登录成功！`)
-        this.$router.push('/home')
+        this.$router.push('/layout')
       } else {
         this.$message.warning(`账号或密码错误！`)
-        this.$router.push('/Login')
       }
       return
     },
@@ -58,36 +57,45 @@ li {
   list-style: none;
 }
 
+.title {
+  text-align: center;
+  margin: 5vh 0;
+  color: skyblue;
+  font-size:24px;
+  text-shadow: .125rem .125rem .125rem #999;
+}
+
 .main {
   position: relative;
-  background: linear-gradient(45deg, #08a, #04a);
+  background: url('../assets/img/login.jpg') no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
   overflow: hidden;
   width: 100vw;
   height: 100vh;
 }
 
-.login {
+.login-container {
   position: absolute;
-  opacity: 1;
+  width: 18.75rem;
+  height: 25rem;
+  opacity: 0.85;
   top: 50%;
   left: 50%;
-  margin-left: -150px;
-  margin-top: -200px;
-  padding-top: 10px;
-  width: 300px;
-  height: 400px;
+  margin-left: -9.375rem;
+  margin-top: -12.5rem;
+  padding-top: .625rem;
   background: linear-gradient(
     45deg,
     #0ac,
-    #08d 95%,
-    rgba(255, 255, 255, 0) 5px
+    rgb(35, 99, 218) 95%,
+    rgba(255, 255, 255, 0) .3125rem
   );
-  transition-duration: 1s;
   transition-delay: 300ms;
-  border-radius: 3px;
-  box-shadow: -15px 15px 10px 1px #333;
+  border-radius: .1875rem;
+  box-shadow: -0.9375rem .9375rem .625rem .0625rem  #0088dd55;
   text-align: center;
-  color: rgba(200, 200, 200, 0.8);
+  color: rgba(200, 200, 200, 0.5);
 }
 
 form {
@@ -98,65 +106,78 @@ form {
   right: 0;
   bottom: 0;
   margin: auto;
-  width: 280px;
-  height: 380px;
+  width: 17.5rem;
+  height: 23.75rem;
   justify-content: center;
   flex-wrap: wrap;
   z-index: 1;
 }
 
-form li:nth-child(1) {
-  padding: 20px;
+
+.login-title{
+  padding: 1.25rem;
   user-select: none;
   color: #fff;
 }
-
+.login-username,.login-password{
+  color: #fff;
+}
 form label {
   position: relative;
-  top: 3px;
-  width: 25px;
+  top: .1875rem;
+  width: 1.5625rem;
   transition-duration: 1s;
 }
 
 form li:not(:nth-child(1)) {
   position: relative;
-  padding: 15px;
+  padding: .9375rem;
   z-index: 2;
-  width: 250px;
+  width: 15.625rem;
 }
 
 form input {
   justify-self: center;
-  background-color: rgba(221, 205, 205, 0.89);
-  border-radius: 3px;
-  margin-left: 5px;
-  width: 150px;
-  height: 25px;
+  background-color: rgba(54, 172, 240, 0.89);
+  border-radius: .1875rem;
+  margin-left: .3125rem;
+  width: 9.375rem;
+  height: 1.5625rem;
   flex: 1;
-  font-size: 16px;
+  font-size: 1rem;
   transition-duration: 1s;
+  outline: none;
+  border:.125rem solid #999;
+  opacity: 0.5;
+  transition-delay: 200ms;
+  transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
 }
 
-form button {
+form input:focus{
+  opacity: 1;
+  border:.125rem solid rgb(194, 189, 189);
+}
+
+.login-button button {
   user-select: none;
   outline: none;
   cursor: pointer;
-  margin-top: 20px;
-  width: 120px;
-  height: 30px;
-  border-radius: 20px;
-  border: 2px solid #cef;
+  margin-top: 1.875rem;
+  width: 7.5rem;
+  height: 1.875rem;
+  border-radius: 1.25rem;
+  border: .125rem solid #cef;
   color: #fff;
   font-weight: 700;
   transition-duration: 500ms;
   background: linear-gradient(0deg, #0af, #0af);
 }
 
-form button:hover {
+.login-button button:hover {
   transform: scale(1.1, 1.1);
 }
 
-form button:active {
+.login-button button:active {
   transition-duration: 100ms;
   transform: scale(0.9, 0.9);
 }

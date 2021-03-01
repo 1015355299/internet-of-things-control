@@ -43,7 +43,7 @@ router.get('/getStatus/:id', (req, res) => {
 
 // 关闭连接
 router.get('/closeSocket', (req, res) => {
-  Dev_Socket.write && Dev_Socket.destroy()
+  Dev_Socket.destroy && Dev_Socket.destroy()
   setTimeout(() => {
     device.isConnected = !Dev_Socket.destroyed
     console.log(
@@ -72,6 +72,7 @@ router.post('/sendCmd', (req, res) => {
   } else {
     console.log('写入指令失败！')
     device.isConnected = false
+    Dev_Socket.destroy && Dev_Socket.destroy()
     res.send({
       msg: `send cmd [${req.body.cmd}] fail!`,
       connected: false,
@@ -128,6 +129,7 @@ function socket_listener(socket) {
   })
   socket.on('end', () => {
     device.isConnected = false
+    Dev_Socket.destroy && Dev_Socket.destroy()
     console.log('socket已断开连接 end')
   })
   socket.on('close', () => {

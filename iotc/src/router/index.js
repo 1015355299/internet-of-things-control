@@ -19,7 +19,7 @@ const routes = [
   {
     path: '/',
     name: 'main',
-    redirect: '/config',
+    redirect: '/home',
   },
   {
     path: '/layout',
@@ -30,11 +30,17 @@ const routes = [
         path: '/home',
         name: 'home',
         component: Home,
+        meta: {
+          keepAlive: true,
+        },
       },
       {
         path: '/config',
         name: 'config',
         component: Config,
+        meta: {
+          keepAlive: true,
+        },
       }
     ]
   },
@@ -47,9 +53,9 @@ const router = new VueRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   // 验证登录
-  // if (!to.meta.isPublic && !window.sessionStorage.getItem('token')) {
-  //   return next('/login')
-  // }
+  if (!to.meta.isPublic && !localStorage.getItem('iotc_token')) {
+    return next('/login')
+  }
   next()
 })
 export default router

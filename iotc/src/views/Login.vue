@@ -15,7 +15,10 @@
           </li>
           <li class="login-button">
             <button type="submit">
-              NEXT DOOR
+              登录
+            </button>
+            <button @click="register">
+              注册
             </button>
           </li>
         </ul>
@@ -25,6 +28,7 @@
 </template>
 
 <script>
+import md5 from 'js-md5'
 export default {
   data() {
     return {
@@ -32,15 +36,42 @@ export default {
     }
   },
   methods: {
-    login() {
-      if (this.model.username == 'mycar' && this.model.password == '1234') {
-        sessionStorage.setItem('token', 'true')
-        this.$message.success(`登录成功！`)
-        this.$router.push('/layout')
-      } else {
-        this.$message.warning(`账号或密码错误！`)
+    // 登录
+    async login() {
+      try {
+        var res = await this.$http.post('/login', {
+          user: this.model.username,
+          password: md5(this.model.password),
+        })
+      } catch (error) {
+        return this.$message.error(`登录失败！`)
       }
-      return
+      if (res.data.state === 0 && res.data.token) {
+        localStorage.setItem('iotc_token', res.data.token)
+        localStorage.setItem('iotc_user', this.model.username)
+        this.$message.success(res.data.message)
+        this.$router.push('/home')
+      } else {
+        this.$message.warning(res.data.message)
+      }
+    },
+    // 注册账号
+    async register(e) {
+      e.preventDefault();
+      try {
+        var res = await this.$http.post('/register', {
+          user: this.model.username,
+          password: md5(this.model.password),
+        })
+      } catch (error) {
+        return this.$message.error(`注册失败！`)
+      }
+      if (res.data.state === 0) {
+        this.$message.success(res.data.message)
+      } else {
+        this.$message.warning(res.data.message)
+      }
+      return false
     },
   },
 }
@@ -61,8 +92,8 @@ li {
   text-align: center;
   margin: 5vh 0;
   color: skyblue;
-  font-size:24px;
-  text-shadow: .125rem .125rem .125rem #999;
+  font-size: 24px;
+  text-shadow: 0.125rem 0.125rem 0.125rem #999;
 }
 
 .main {
@@ -84,16 +115,16 @@ li {
   left: 50%;
   margin-left: -9.375rem;
   margin-top: -12.5rem;
-  padding-top: .625rem;
+  padding-top: 0.625rem;
   background: linear-gradient(
     45deg,
     #0ac,
     rgb(35, 99, 218) 95%,
-    rgba(255, 255, 255, 0) .3125rem
+    rgba(255, 255, 255, 0) 0.3125rem
   );
   transition-delay: 300ms;
-  border-radius: .1875rem;
-  box-shadow: -0.9375rem .9375rem .625rem .0625rem  #0088dd55;
+  border-radius: 0.1875rem;
+  box-shadow: -0.9375rem 0.9375rem 0.625rem 0.0625rem #0088dd55;
   text-align: center;
   color: rgba(200, 200, 200, 0.5);
 }
@@ -113,25 +144,25 @@ form {
   z-index: 1;
 }
 
-
-.login-title{
+.login-title {
   padding: 1.25rem;
   user-select: none;
   color: #fff;
 }
-.login-username,.login-password{
+.login-username,
+.login-password {
   color: #fff;
 }
 form label {
   position: relative;
-  top: .1875rem;
+  top: 0.1875rem;
   width: 1.5625rem;
   transition-duration: 1s;
 }
 
 form li:not(:nth-child(1)) {
   position: relative;
-  padding: .9375rem;
+  padding: 0.9375rem;
   z-index: 2;
   width: 15.625rem;
 }
@@ -139,23 +170,23 @@ form li:not(:nth-child(1)) {
 form input {
   justify-self: center;
   background-color: rgba(54, 172, 240, 0.89);
-  border-radius: .1875rem;
-  margin-left: .3125rem;
+  border-radius: 0.1875rem;
+  margin-left: 0.3125rem;
   width: 9.375rem;
   height: 1.5625rem;
   flex: 1;
   font-size: 1rem;
   transition-duration: 1s;
   outline: none;
-  border:.125rem solid #999;
+  border: 0.125rem solid #999;
   opacity: 0.5;
   transition-delay: 200ms;
   transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
 }
 
-form input:focus{
+form input:focus {
   opacity: 1;
-  border:.125rem solid rgb(194, 189, 189);
+  border: 0.125rem solid rgb(194, 189, 189);
 }
 
 .login-button button {
@@ -166,7 +197,7 @@ form input:focus{
   width: 7.5rem;
   height: 1.875rem;
   border-radius: 1.25rem;
-  border: .125rem solid #cef;
+  border: 0.125rem solid #cef;
   color: #fff;
   font-weight: 700;
   transition-duration: 500ms;

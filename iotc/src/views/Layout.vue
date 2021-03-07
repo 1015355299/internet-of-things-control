@@ -26,7 +26,10 @@
         </el-menu>
       </header>
       <div class="container-body">
-        <router-view />
+        <keep-alive>
+          <router-view v-if="$route.meta.keepAlive"></router-view>
+        </keep-alive>
+        <router-view v-if="!$route.meta.keepAlive"></router-view>
       </div>
     </div>
   </div>
@@ -51,6 +54,9 @@ export default {
     -khtml-user-select: none; /* KHTML内核私有属性 */
     -o-user-select: none; /* Opera私有属性 */
     user-select: none; /* CSS3属性 */
+  }
+  .container-header .nav-menu .el-menu-item {
+    background: transparent !important;
   }
   .container-header .nav-menu .el-menu-item:hover {
     background: #151a6755 !important;

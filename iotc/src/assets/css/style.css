@@ -4,3 +4,11 @@
   font-size: 16px;
 }
 
+.notify-box{
+  background-color: #f2f9fa;
+  border: 0px;
+  font-size: 18px;
+  font-weight: 700;
+  width: 20vw;
+  z-index: 99999999 !important;
+}

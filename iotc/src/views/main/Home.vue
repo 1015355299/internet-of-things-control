@@ -14,19 +14,36 @@
       <div class="main-body" style="color:#fff">
         <div class="ls-item main-body-top">
           <i></i>
+          <div class="car-select">
+            <el-select
+              popper-class="car-select-item"
+              v-model="curSelectCar"
+              size="mini"
+              placeholder="请选择连接的设备"
+              @change="handleChangeCar"
+            >
+              <el-option
+                v-for="car in carSelectList"
+                :key="car.name"
+                :label="car.name"
+                :value="car.secret"
+              >
+              </el-option>
+            </el-select>
+          </div>
           <div
             class="car-state"
-            :title="isConnected ? '服务器已连接' : '服务器未连接'"
+            :title="mqttIsConnected ? 'MQTT服务器已连接' : 'MQTT服务器未连接'"
           >
             <div
               :class="
-                isConnected ? 'car-state-connected' : 'car-state-disconnect'
+                mqttIsConnected ? 'car-state-connected' : 'car-state-disconnect'
               "
             >
               <i
                 :class="
                   'iconfont ' +
-                    (isConnected ? 'icon-B' : 'icon-duankailianjie1')
+                    (mqttIsConnected ? 'icon-B' : 'icon-duankailianjie1')
                 "
               ></i>
             </div>
@@ -34,15 +51,13 @@
           <div
             class="car-state"
             :title="
-              curEchartsData.car_control_transmission_state
-                ? '小车在线'
-                : '小车离线'
+              controlIsConnected ? '云控制服务器已连接' : '云控制服务器未连接'
             "
           >
             <i
               :class="
                 `iconfont icon-zaixian ${
-                  curEchartsData.car_control_transmission_state
+                  controlIsConnected
                     ? 'car-state-connected'
                     : 'car-state-disconnect'
                 }`
@@ -197,17 +212,17 @@
           <div class="speed-level">
             <div
               :class="
-                `speed-level-stage ${speedLevel === 4 ? 'cur-speed-level' : ''}`
+                `speed-level-stage ${speedLevel === 8 ? 'cur-speed-level' : ''}`
               "
-              @click="handleSpeedLevel(4)"
+              @click="handleSpeedLevel(8)"
             >
               低速
             </div>
             <div
               :class="
-                `speed-level-stage ${speedLevel === 2 ? 'cur-speed-level' : ''}`
+                `speed-level-stage ${speedLevel === 4 ? 'cur-speed-level' : ''}`
               "
-              @click="handleSpeedLevel(2)"
+              @click="handleSpeedLevel(4)"
             >
               中速
             </div>
@@ -485,7 +500,6 @@
 <script>
 export default {
   data() {
-    const self = this
     const echartsData = {
       // 速度
       cur_speed_whole: 0,
@@ -494,7 +508,11 @@ export default {
       set_speed_angle: 0,
       set_speed_dir: 0,
       set_dir_speed_whole: 20,
-
+      // 左右前后轮速度
+      cur_speed_lq: 0,
+      cur_speed_rq: 0,
+      cur_speed_lh: 0,
+      cur_speed_rh: 0,
       // 舵机
       cur_duoji_1_angle: 0,
       cur_duoji_2_angle: 0,
@@ -512,7 +530,6 @@ export default {
       camera_is_abort: 1, // 是否中断标志位
       // 其他标志
       camera_frame: 0, // 帧率
-      car_control_transmission_state: 0, // 小车控制连接状态
       // 历史数据
       history_frame: [0],
       history_speed: [0],
@@ -1695,7 +1712,6 @@ export default {
             },
           ],
         },
-       
       ],
       camera_effectList: [
         '正常',
@@ -1729,6 +1745,11 @@ export default {
         set_speed_angle: 0,
         set_speed_dir: 0,
         set_dir_speed_whole: 20,
+        // 左右前后轮速度
+        cur_speed_lq: 0,
+        cur_speed_rq: 0,
+        cur_speed_lh: 0,
+        cur_speed_rh: 0,
         // 舵机
         cur_duoji_1_angle: 0,
         cur_duoji_2_angle: 0,
@@ -1746,7 +1767,6 @@ export default {
         camera_is_abort: 1, // 是否中断标志位
         // 其他标志
         camera_frame: 0, // 帧率
-        car_control_transmission_state: 0, // 小车控制连接状态
         // 历史数据
         history_frame: [0],
         history_speed: [0],
@@ -1765,7 +1785,7 @@ export default {
       propsIsOk: {},
       propsTime: {},
       selectList: [0, 1, 2, 3, 4],
-      stopHistoryUpdate: true,
+      stopHistoryUpdate: false,
       preImgData: null,
       // 需要云端同步到设备的属性
       syncProps: [
@@ -1787,9 +1807,15 @@ export default {
         'camera_is_abort',
       ],
       hasReceiveImgData: false,
-      isConnected: false,
-      isConnectedTime: 0,
-      speedLevel: 4,
+      mqttIsConnected: false,
+      mqttIsConnectedTime: 0,
+      controlIsConnected: false, // 小车控制连接状态
+      controlIsConnectedTime: 0,
+      speedLevel: 8,
+      carSelectList: [],
+      curSelectCar: '',
+      historyTimer: 0,
+      isActive: false,
     }
   },
   watch: {
@@ -1806,11 +1832,28 @@ export default {
     this.drawAllEcharts()
     this.openWebSocket()
     this.initDrag()
-    this.initShowHistory()
+
     // 摇杆节流
     this.setMove = this.throttle(this.setMove, 200)
   },
-  befordistory() {
+  activated() {
+    this.isActive = true
+    this.statesData = null
+    this.initShowHistory()
+    // 获取需同步的数据
+    this.syncData()
+    // 获取默认配置，初始化同步数据
+    this.syncDefaultConfig()
+    // 获取用户名下设备列表
+    this.getDeviceByUser()
+  },
+  deactivated() {
+    this.isActive = false
+    clearInterval(this.historyTimer)
+    clearTimeout(this.mqttIsConnectedTime)
+    clearTimeout(this.controlIsConnectedTime)
+  },
+  beforeDestroy() {
     // 关闭ws连接
     this.wss && this.wss.close()
     this.wss = null
@@ -1830,6 +1873,8 @@ export default {
     /* 请求 */
     // 通用修改属性
     putProps(url, params) {
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
       return this.$http.put(url, {
         Payload: JSON.stringify({
           clientToken: this.clientToken,
@@ -1839,21 +1884,56 @@ export default {
         DeviceName: this.DeviceName,
         ProductId: this.ProductId,
         Topic: `$thing/down/property/${this.ProductId}/${this.DeviceName}`,
+        user,
+        secret,
       })
     },
     // 获取历史属性值
     getHistoryProp(FieldName, Limit = 30) {
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
       return this.$http.post(`/historyPropValue`, {
         DeviceName: this.DeviceName,
         FieldName: FieldName,
         Limit: Limit,
+        user,
+        secret,
+      })
+    },
+    // 获取需同步的数据
+    getSyncData() {
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
+      return this.$http.post(`/get/sync`, {
+        user,
+        secret,
+      })
+    },
+    // 获取默认配置
+    getDefaultConfig() {
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
+      return this.$http.post(`/get/default`, {
+        user,
+        secret,
+      })
+    },
+    // 获取设备列表
+    getDeviceList() {
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
+      return this.$http.post(`/public/deviceList`, {
+        user,
+        secret,
       })
     },
     // 小车移动
     putMove(params, debounce = false, time = 0) {
-      if (this.putMove.timer) {
-        return
-      }
+      // 处于节流中，直接不响应指令
+      if (this.putMove.timer) return
+      const user = localStorage.getItem('iotc_user') || ''
+      const secret = localStorage.getItem('iotc_secret') || ''
+      // 配置节流
       if (debounce) {
         this.putMove.timer = setTimeout(() => {
           this.putMove.timer = 0
@@ -1864,9 +1944,12 @@ export default {
       // set_speed_angle:a-0
       // set_speed_dir:d-0
       // set_dir_speed_whole:w-1
-      // wifi1_reset: r-0
       // wifi2_reset: r-1
-      // system_reset: r-2 固件更新
+      // system_reset: r-2
+      // receive_app: r-3
+      // entry_app: a-1
+      // cancel_auto_app: c-0
+
       const table = {
         set_speed_whole: 'w-0',
         set_speed_angle: 'a-0',
@@ -1874,38 +1957,31 @@ export default {
         set_dir_speed_whole: 'w-1',
       }
       const data = {}
+      // 序列化指令
       for (const key in params) {
         data[table[key]] = params[key]
       }
-      return this.$http.post(`/move`, { data, debounce, time })
+
+      return this.$http.post(`/move`, { user, secret, data, debounce, time })
     },
-    // 展示历史数据
-    async showHistoryData() {
+    // 获取历史数据
+    async showHistoryData(field, key) {
       try {
-        var resArr = await Promise.all([
-          this.getHistoryProp('camera_frame'),
-          this.getHistoryProp('cur_speed_whole'),
-        ])
+        var res = await this.getHistoryProp(field)
       } catch (error) {}
-      // console.log(res.data.Results)
-      const key = ['history_frame', 'history_speed']
-      resArr &&
-        resArr.forEach((res, index) => {
-          if (res && res.data && res.data.Results instanceof Array) {
-            this.echartsData[key[index]] = res.data.Results.map(
-              (item) => +item.Value
-            )
-          }
-        })
+      if (res && res.data && res.data.Results instanceof Array) {
+        this.echartsData[key] = res.data.Results.map((data) => +data.Value)
+      }
     },
     // 修改属性
     async propsChange(type, isNoTime = false) {
+      // 指令下发超时配置
       if (!isNoTime) {
         this.propsIsOk[type] = false
         this.propsTime[type] = setTimeout(() => {
           this.propsIsOk[type] = true
           this.curEchartsData[type] = this.echartsData[type]
-        }, 10000)
+        }, 8000)
       }
       try {
         const params = { [type]: this.curEchartsData[type] }
@@ -1913,7 +1989,50 @@ export default {
       } catch (error) {}
       // console.log(res)
     },
+    // 更新默认配置
+    async syncDefaultConfig() {
+      try {
+        var res = await this.getDefaultConfig()
+      } catch (error) {}
+      if (res.data && res.data.data) {
+        const fields = JSON.parse(res.data.data)
+        Object.assign(this.curEchartsData, fields)
+      }
+    },
+    // 获取需同步的数据
+    async syncData() {
+      try {
+        var res = await this.getSyncData()
+      } catch (error) {}
+      if (res.data.data) {
+        const syncDatas = res.data.data.split(',')
+        this.syncProps = syncDatas
+        // console.log(syncDatas)
+      }
+    },
+    // 获取用户所属设备
+    async getDeviceByUser() {
+      try {
+        var res = await this.getDeviceList()
+      } catch (error) {}
+      if (res.data && res.data.data) {
+        this.carSelectList = JSON.parse(res.data.data) || []
+        const secret = localStorage.getItem('iotc_secret')
+        if (secret) {
+          this.carSelectList.forEach((car) => {
+            if (car.secret === secret) {
+              this.curSelectCar = car.name
+            }
+          })
+        }
+      }
+      this.showMessage(res.data.state, res.data.message)
+    },
     /* 事件 */
+    // 切换连接
+    handleChangeCar(secret) {
+      localStorage.setItem('iotc_secret', secret)
+    },
     // 移动端开关
     handleChangeCameraState(state) {
       this.curEchartsData.camera_is_abort = state
@@ -1925,16 +2044,21 @@ export default {
     },
     // 同步数据
     handleSyncData(type) {
+      // 小车数据同步到云端
       if (type === 'car') {
-        // 小车数据同步到云端
+        // 获取过设备数据，才进行更新
         if (this.statesData) {
-          // 获取过设备数据，才进行更新
-          Object.assign(this.curEchartsData, this.echartsData)
+          // 只下发需同步的数据
+          for (const key of this.syncProps) {
+            this.curEchartsData[key] = this.echartsData[key]
+          }
         }
       } else {
-        this.hasReceiveImgData = false
         // 云端数据同步到小车
+        this.hasReceiveImgData = false
+        // 只下发需同步的数据
         for (const key of this.syncProps) {
+          if (key === 'history_frame' || key === 'history_speed') contniue
           this.propsChange(key)
         }
       }
@@ -1958,7 +2082,7 @@ export default {
           set_speed_dir: dir,
         })
       } else {
-        // 停止旋转
+        // 停止旋转，即归位
         this.resetMove()
       }
     },
@@ -1978,6 +2102,20 @@ export default {
       this.propsChange(type)
     },
     /* 处理 */
+    // 处理响应通知
+    showMessage(state, message, show = false) {
+      switch (state) {
+        case 0: // 成功
+          show && this.$message.success(message)
+          break
+        case -1: // 登录过期
+          break
+        default:
+          // 其他
+          show && this.$message.warning(message)
+          break
+      }
+    },
     // 重置元素位置
     setEl(startLeft, startTop, distance = 0) {
       this.dragEl.display = 'none'
@@ -1990,6 +2128,7 @@ export default {
     },
     // 重置移动
     resetMove() {
+      // 发送停止指令，即归位
       this.putMove(
         {
           set_speed_whole: 0,
@@ -2043,33 +2182,108 @@ export default {
         // 第二象限
         degree = 90 - (degree * 180) / Math.PI
       }
+      // 发送移动指令
       this.putMove({
         set_speed_whole: Math.round(distance),
         set_speed_angle: Math.round(degree),
         set_speed_dir: 0,
       })
     },
-    // 轮询连接状态
-    pollState() {
-      if (!this.isConnected) {
-        this.$message.success('小车已连接MQTT服务器')
+    // 轮询mqtt连接状态
+    pollMqttState() {
+      // 由断开切换至连接时提示
+      if (!this.mqttIsConnected) {
+        this.$notify({
+          message: '小车已连接MQTT服务器',
+          duration: 2000,
+          customClass: 'notify-box',
+        })
       }
-      this.isConnected = true
-      if (this.isConnectedTime) clearTimeout(this.isConnectedTime)
-      this.isConnectedTime = setTimeout(() => {
-        this.isConnected = false
-        this.curEchartsData.car_control_transmission_state = 0
-        this.hasReceiveImgData = false
+      this.mqttIsConnected = true
+      sessionStorage.setItem(
+        'iotc_state',
+        JSON.stringify({
+          mqttIsConnected: true,
+          controlIsConnected: this.controlIsConnected,
+        })
+      )
+
+      if (this.mqttIsConnectedTime) clearTimeout(this.mqttIsConnectedTime)
+      this.mqttIsConnectedTime = setTimeout(() => {
+        // 超时，未收到推送数据
+        // mqtt标记断开
+        this.mqttIsConnected = false
+        sessionStorage.setItem(
+          'iotc_state',
+          JSON.stringify({
+            mqttIsConnected: false,
+            controlIsConnected: this.controlIsConnected,
+          })
+        )
+        // 标记未收到推送数据
         this.statesData = null
-        this.curEchartsData.camera_is_abort = 1
-        this.$message.warning('小车连接断开')
+        // 标记视频断开
+        this.$notify({
+          message: 'MQTT服务器连接已断开',
+          duration: 2000,
+          customClass: 'notify-box',
+        })
+      }, 10000)
+    },
+    // 轮询云控制连接状态
+    pollControlState() {
+      // 由断开切换至连接时提示
+      if (!this.controlIsConnected) {
+        this.$notify({
+          message: '小车已连接云控制服务器',
+          duration: 2000,
+          customClass: 'notify-box',
+        })
+      }
+      this.controlIsConnected = true
+      sessionStorage.setItem(
+        'iotc_state',
+        JSON.stringify({
+          mqttIsConnected: this.mqttIsConnected,
+          controlIsConnected: true,
+        })
+      )
+
+      if (this.controlIsConnectedTime) clearTimeout(this.controlIsConnectedTime)
+      this.controlIsConnectedTime = setTimeout(() => {
+        // 超时，未收到推送数据
+        // 标记断开
+        this.controlIsConnected = false
+        sessionStorage.setItem(
+          'iotc_state',
+          JSON.stringify({
+            mqttIsConnected: this.mqttIsConnected,
+            controlIsConnected: false,
+          })
+        )
+
+        // 标记未接收到图像数据
+        this.hasReceiveImgData = false
+        // 标记视频断开
+        // this.curEchartsData.camera_is_abort = 1
+        this.$notify({
+          message: '云控制服务器连接已断开',
+          duration: 2000,
+          customClass: 'notify-box',
+        })
       }, 10000)
     },
     // 初始化显示历史属性值
     initShowHistory() {
-      setInterval(() => {
+      this.historyTimer = setInterval(() => {
         if (!this.stopHistoryUpdate) {
-          this.showHistoryData()
+          // 基于同步数据进行同步
+          if (this.syncProps.includes('history_frame')) {
+            this.showHistoryData('camera_frame', 'history_frame')
+          }
+          if (this.syncProps.includes('history_speed')) {
+            this.showHistoryData('cur_speed_whole', 'history_speed')
+          }
         }
       }, 2000)
     },
@@ -2091,12 +2305,8 @@ export default {
     },
     // 获取摇杆旋转角度
     getDegree(x1, y1, x2, y2) {
-      if (x2 === x1) {
-        return Math.PI / 2
-      }
-      if (y2 === y1) {
-        return 0
-      }
+      if (x2 === x1) return Math.PI / 2
+      if (y2 === y1) return 0
       return Math.abs(Math.atan((y2 - y1) / (x2 - x1)))
     },
     // 获取摇杆长度
@@ -2174,47 +2384,134 @@ export default {
     },
     // 更新图表数据
     putEchartsData() {
+      // 客户端获取过服务器推送的小车数据
       if (this.statesData) {
-        this.options[0].series[0].data[0].value = this.echartsData.cur_speed_whole
-        this.options[1].series[0].data[0].value = this.echartsData.cur_speed_lq
-        this.options[1].series[1].data[0].value = this.echartsData.cur_speed_rq
-        this.options[1].series[2].data[0].value = this.echartsData.cur_speed_lh
-        this.options[1].series[3].data[0].value = this.echartsData.cur_speed_rh
-        this.options[2].series[2].data[0].value = -this.echartsData
-          .cur_duoji_1_angle
-        this.options[2].series[5].data[0].value = -this.echartsData
-          .cur_duoji_2_angle
-        if (!this.stopHistoryUpdate) {
-          this.options[3].series[0].data = [
-            ...this.echartsData.history_frame,
-          ].reverse()
-          this.options[3].series[1].data = [
-            ...this.echartsData.history_speed,
-          ].reverse()
-        }
-        this.curEchartsData.camera_frame = this.echartsData.camera_frame
-        if (this.isConnected) {
-          this.curEchartsData.car_control_transmission_state = this.echartsData.car_control_transmission_state
-        }
+        const options = this.options
+        const echarts = this.echartsData
+        const curEcharts = this.curEchartsData
+        // 更新速度相关的数据
+        options[0].series[0].data[0].value = echarts.cur_speed_whole
+        options[1].series[0].data[0].value = echarts.cur_speed_lq
+        options[1].series[1].data[0].value = echarts.cur_speed_rq
+        options[1].series[2].data[0].value = echarts.cur_speed_lh
+        options[1].series[3].data[0].value = echarts.cur_speed_rh
 
-        for (const key in this.echartsData) {
+        // 更新舵机相关数据
+        options[2].series[2].data[0].value = -echarts.cur_duoji_1_angle
+        options[2].series[5].data[0].value = -echarts.cur_duoji_2_angle
+
+        // 使能获取历史数据
+        if (!this.stopHistoryUpdate) {
+          let arr
+          // 更新历史帧率
+          if (this.syncProps.includes('history_frame')) {
+            arr = [...(echarts.history_frame || [0])].reverse()
+            options[3].series[0].data = arr
+          }
+          // 更新历史速度
+          if (this.syncProps.includes('history_speed')) {
+            arr = [...(echarts.history_speed || [0])].reverse()
+            options[3].series[1].data = arr
+          }
+        }
+        // 更新当前帧率
+        curEcharts.camera_frame = echarts.camera_frame
+
+        // 遍历echarts数据，消除加载蒙层
+        for (const key in echarts) {
           if (this.propsIsOk[key] === undefined) {
             this.$set(this.propsIsOk, key, true)
           }
           if (this.propsTime[key] === undefined) {
             this.$set(this.propsTime, key, 0)
           }
-          if (this.curEchartsData[key] === this.echartsData[key]) {
+          // 数据更新到视图中，取消蒙层
+          if (curEcharts[key] === echarts[key]) {
             this.propsIsOk[key] = true
             clearTimeout(this.propsTime[key])
           }
         }
+        // 更新echarts配置数据
         for (const index in this.els) {
           if (this.stopHistoryUpdate && index == 3) {
             continue
           }
-          this.myEcharts[index].setOption(this.options[index])
+          this.myEcharts[index].setOption(options[index])
         }
+      }
+    },
+    // 只同步需要同步的推送数据
+    syncPushData(newCarState) {
+      const tmpObj = {}
+      for (const key in newCarState) {
+        // 筛选出只存在同步集合中的数据字段
+        if (this.syncProps.includes(key)) {
+          tmpObj[key] = newCarState[key]
+        }
+      }
+      // 按需更新同步的数据到echarts
+      Object.assign(this.echartsData, tmpObj)
+    },
+    // 更新小车状态
+    updateCarState(data) {
+      // 更新设备连接状态,有数据则刷新连接
+      this.pollMqttState()
+
+      // 未获取到过数据，首次接收推送数据
+      if (!this.statesData && this.isActive) {
+        // 提示开始同步数据
+
+        // 延迟6s后云端配置下发到小车上
+        setTimeout(() => {
+          this.handleSyncData('cloud')
+        }, 1000)
+      }
+      // 保持本次接收到的数据
+      this.statesData = data
+      // 获取设备token，用于发送指令给设备
+      this.clientToken = this.statesData.payload.clientToken
+      // 根据配置的需同步的数据，更新设备数据
+      this.syncPushData(this.statesData.payload.params)
+    },
+    // 保持websocket连接
+    keepWssConnect(data) {
+      const secret = localStorage.getItem('iotc_secret') || ''
+      if (data === 'ping' && secret) {
+        setTimeout(() => {
+          this.wss.send(`pong:${secret}`)
+        }, 3000)
+        return true
+      }
+      return false
+    },
+    // websocket收到消息
+    wssReceiveMessage(msg) {
+      // 心跳包维持
+      if (this.keepWssConnect(msg.data)) return
+      // 非激活状态不需要更新
+      // console.log(msg)
+      // 状态数据
+      if (typeof msg.data === 'string') {
+        msg = JSON.parse(msg.data) || {}
+        if (msg.type === 'states') {
+          this.updateCarState(msg.data)
+          if (sessionStorage.getItem('reset_wifi2')) {
+            sessionStorage.removeItem('reset_wifi2')
+            const params = { reset_wifi2: 1 }
+            this.putProps(`/putProps`, params)
+          }
+        } else if (msg.type === 'connect') {
+          this.pollControlState()
+          this.controlIsConnected = msg.data.controlIsConnected
+        }
+      } else if (this.isActive) {
+        // 图片数据
+        // 用于保存图片
+        this.preImgData = URL.createObjectURL(msg.data)
+        //console.log(this.preImgData)
+        document.getElementById('imgData').src = this.preImgData
+        // 接收图像数据标志位
+        this.hasReceiveImgData = true
       }
     },
     // 建立webSocket连接获取服务器数据
@@ -2226,48 +2523,7 @@ export default {
         console.log('wss：连接建立')
       }
       // ws连接收到消息回调
-      this.wss.onmessage = (msg) => {
-        // 心跳维持
-        if (msg.data === 'ping') {
-          return setTimeout(() => {
-            this.wss.send('pong')
-          }, 3000)
-        }
-        // 状态数据
-        if (typeof msg.data === 'string') {
-          // 更新设备连接状态
-          this.pollState()
-          const res = (JSON.parse(msg.data) || {}).data
-          if (res) {
-            if (!this.statesData) {
-              setTimeout(() => {
-                this.$message.warning('同步小车数据中...')
-              }, 1000)
-              // 同步小车数据
-              setTimeout(() => {
-                this.handleSyncData('car')
-                this.handleSyncData('cloud')
-                this.$message.success('小车数据同步完成')
-              }, 6000)
-            }
-            this.statesData = res
-            // 获取设备token
-            this.clientToken = this.statesData.payload.clientToken
-            // 更新设备数据
-            Object.assign(this.echartsData, this.statesData.payload.params)
-            //this.putEchartsData()
-          }
-          //console.log(this.statesData.payload.params)
-        } else {
-          // 用于保存图片
-          this.preImgData = URL.createObjectURL(msg.data)
-          //console.log(this.preImgData)
-          document.getElementById('imgData').src = this.preImgData
-          // 接收图像数据标志位
-          this.hasReceiveImgData = true
-        }
-        // console.log(`ws：收到消息`)
-      }
+      this.wss.onmessage = this.wssReceiveMessage
       // ws连接出错回调
       this.wss.onerror = (e) => {
         this.wss.close()

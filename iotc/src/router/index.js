@@ -3,7 +3,8 @@ import VueRouter from 'vue-router'
 import Layout from '../views/Layout.vue'
 import Login from '../views/Login.vue'
 import Home from '../views/main/Home.vue'
-import Config from '../views/main/Config.vue'
+const Config = () => import(/* webpackChunkName: "group-foo" */ '../views/main/Config.vue')
+
 
 Vue.use(VueRouter)
 
@@ -19,7 +20,7 @@ const routes = [
   {
     path: '/',
     name: 'main',
-    redirect: '/home',
+    redirect: '/login',
   },
   {
     path: '/layout',

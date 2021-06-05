@@ -744,6 +744,11 @@ export default {
 </script>
 
 <style scoped>
+  .config-body /deep/ .el-input.el-input--suffix,
+  .config-body /deep/ .el-input__inner,
+  .config-body /deep/ .el-select-dropdown.el-popper.option-list{
+    height: 22px !important;
+  }
 .config-main {
   height: 100vh;
   min-width: 568px !important;

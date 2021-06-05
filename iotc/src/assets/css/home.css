@@ -122,7 +122,7 @@
   .camera-right > ul > li {
     display: block;
     margin-bottom: 8px;
-    height: 20px;
+    height: 22px;
     line-height: 20px;
   }
   .camera-left > ul > li > i,
@@ -133,7 +133,7 @@
   .camera-right .el-tag {
     max-width: 70px;
     min-width: 65px;
-    height: 20px;
+    height: 22px;
     cursor: pointer;
     float: right;
     text-align: center;
@@ -142,25 +142,14 @@
   .select-item {
     max-width: 70px;
     min-width: 65px;
-    height: 20px;
+    height: 22px;
     cursor: pointer;
     float: right;
     text-align: center ;
     font-size: 8px !important;
     background-color: #00000000 !important;
   }
-  .select-item /deep/ .el-input.el-input--suffix,
-  .select-item /deep/ .el-input__inner,
-  .select-item /deep/ .el-select-dropdown.el-popper.option-list {
-    display: block;
-    text-align: center;
-    padding: 0px !important;
-    height: 20px;
-    background-color: #00000000 !important;
-  }
-  .select-item /deep/ .el-input__suffix {
-    display: none;
-  }
+
 
   .main-body-top {
     height: 39px;
@@ -717,7 +706,7 @@
     vertical-align: middle;
   }
   .openImg {
-    flex: 3;
+    flex: 5;
     height: 40px;
     line-height: 40px;
     display: flex;

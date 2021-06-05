@@ -2058,7 +2058,7 @@ export default {
         this.hasReceiveImgData = false
         // 只下发需同步的数据
         for (const key of this.syncProps) {
-          if (key === 'history_frame' || key === 'history_speed') contniue
+          if (key === 'history_frame' || key === 'history_speed') continue
           this.propsChange(key)
         }
       }
@@ -2489,10 +2489,13 @@ export default {
       // 心跳包维持
       if (this.keepWssConnect(msg.data)) return
       // 非激活状态不需要更新
-      // console.log(msg)
       // 状态数据
       if (typeof msg.data === 'string') {
-        msg = JSON.parse(msg.data) || {}
+        try {
+          msg = JSON.parse(msg.data) || {}
+        } catch (error) {
+          msg = {}
+        }
         if (msg.type === 'states') {
           this.updateCarState(msg.data)
           if (sessionStorage.getItem('reset_wifi2')) {
@@ -2506,9 +2509,9 @@ export default {
         }
       } else if (this.isActive) {
         // 图片数据
+        // console.log(msg.data.size)
         // 用于保存图片
         this.preImgData = URL.createObjectURL(msg.data)
-        //console.log(this.preImgData)
         document.getElementById('imgData').src = this.preImgData
         // 接收图像数据标志位
         this.hasReceiveImgData = true
@@ -2565,7 +2568,22 @@ export default {
 .option-list {
   background-color: #034079 !important;
 }
+.el-input.el-input--suffix,
+.el-input__inner {
+  display: block;
+  text-align: center;
+  padding: 0px !important;
+  background-color: #00000000 !important;
+}
+.el-input__suffix {
+  display: none;
+}
 </style>
 <style scoped>
 @import '~@/assets/css/home.css';
+.camera-state-content /deep/ .el-input.el-input--suffix,
+.camera-state-content /deep/ .el-input__inner,
+.camera-state-content /deep/ .el-select-dropdown.el-popper.option-list {
+  height: 22px !important;
+}
 </style>
